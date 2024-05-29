@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Network Monitor</title>
+    <!-- Include Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+      body {
+        background-color: #f8f9fa;
+        margin: 0; /* Reset margin to remove default space around body */
+        padding: 0; /* Reset padding to remove default padding around body */
+      }
+
+      .navbar {
+        background-color: #343a40;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .navbar-brand {
+        color: #ffffff;
+        font-weight: bold;
+      }
+
+      .content {
+        margin-top: 100px; /* Add space between the navbar and content */
+      }
+
+      .card {
+        margin-bottom: 20px;
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-right: 0px;
+      }
+
+      .card-header {
+        background-color: #343a40;
+        color: #ffffff;
+        border-bottom: none;
+      }
+
+      .card-title {
+        color: #ffffff;
+      }
+
+      .card-body {
+        padding: 10px;
+      }
+
+      .table {
+        background-color: #ffffff;
+      }
+
+      .table th {
+        background-color: #343a40;
+        color: #ffffff;
+      }
+
+      .table td {
+        background-color: #f8f9fa;
+        color: #343a40;
+      }
+
+      .downtime {
+        color: #dc3545;
+      }
+
+      .uptime {
+        color: #28a745;
+      }
+
+      .table-btn {
+        cursor: pointer;
+      }
+
+      .loading {
+        display: none;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+      }
+
+      /* Add New Branch Form Styles */
+      .add-branch-form {
+        background-color: #ffffff;
+        border: 1px solid #e5e5e5;
+        padding: 30px;
+        border-radius: 10px;
+      }
+
+      /* Position form at the top in mobile view */
+      @media (max-width: 767px) {
+        .add-branch-form {
+          margin-bottom: 20px;
+          position: relative; /* Reset position for mobile */
+        }
+      }
+
+      /* Position form to the right in desktop view */
+      @media (min-width: 768px) {
+        .add-branch-form {
+          position: absolute;
+          right: 20px;
+          top: 0;
+          width: 300px;
+        }
+      }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        function updateStatus() {
+          // Show loading spinner while fetching data
+          // $('.loading').show();
+
+          $.ajax({
+            url: "/get_status",
+            method: "GET",
+            dataType: "json",
+            success: function (data) {
+              var searchQuery = $("#searchInput").val().toLowerCase(); // Get the search query
+              var html = "";
+              var foundResults = false; // Flag to track if any matching results were found
+              $.each(data.connection_statuses, function (index, status) {
+                var wan_ip = data.wan_ips[index];
+                var ip = data.ips[index];
+                var name = data.connection_names[index];
+                var vendor = data.vendors[index];
+                var serial = data.serials[index];
+                var downtime = status.downtime;
+                var uptime = status.uptime;
+                var downtimeDuration = status.downtime_duration;
+                var year = "";
+                var month = "";
+
+                if (downtime) {
+                  year = downtime.split(" ")[0].split("-")[0];
+                  month = downtime.split(" ")[0].split("-")[1];
+                }
+
+                var statusIndicator =
+                  '<div class="mb-3 fw-bold">' +
+                  '<span class="' +
+                  (status.status === "connected"
+                    ? "text-success"
+                    : "text-danger") +
+                  '">' +
+                  "System is " +
+                  (status.status === "connected" ? "Up!" : "Down!") +
+                  "</span>" +
+                  "</div>";
+
+                // Check if the search query matches the WAN IP or Connection Name
+                if (
+                  wan_ip.toLowerCase().includes(searchQuery) ||
+                  name.toLowerCase().includes(searchQuery)
+                ) {
+                  foundResults = true; // Set the flag to true
+
+                  html += '<div class="col-md-12">';
+
+                  html += '<div class="card">';
+                  html +=
+                    '<div class="card-header bg-info text-white">' +
+                    name +
+                    " (" +
+                    wan_ip +
+                    ") Status</div>";
+                  html += '<div class="card-body">';
+                  html += statusIndicator;
+                  html += '<div class="table-responsive">';
+                  html += '<table class="table table-bordered">';
+                  html += "<thead>";
+                  html += '<tr class="bg-primary text-white">';
+                  html += '<th scope="col">Serial</th>';
+                  html += '<th scope="col">Connection Name</th>';
+                  html += '<th scope="col">IP</th>';
+                  html += '<th scope="col">WAN IP</th>';
+                  html += '<th scope="col">Vendor</th>';
+                  html += '<th scope="col">Downtime</th>';
+                  html += '<th scope="col">Uptime</th>';
+                  html += '<th scope="col">Downtime Duration</th>';
+                  html += '<th scope="col">Count of Downtime</th>';
+                  html += '<th scope="col">Year</th>';
+                  html += '<th scope="col">Month</th>';
+                  html += "</tr>";
+                  html += "</thead>";
+                  html += "<tbody>";
+                  html += "<tr>";
+                  html += "<td>" + serial + "</td>";
+                  html += "<td>" + name + "</td>";
+                  html += "<td>" + ip + "</td>";
+                  html += "<td>" + wan_ip + "</td>";
+                  html += "<td>" + vendor + "</td>";
+                  html += '<td class="text-danger">' + downtime + "</td>";
+                  html += '<td class="text-success">' + uptime + "</td>";
+                  html +=
+                    '<td class="text-danger">' +
+                    downtimeDuration +
+                    " seconds</td>";
+                  html +=
+                    '<td class="text-danger">' +
+                    status.count_of_downtime +
+                    "</td>";
+                  html += "<td>" + year + "</td>";
+                  html += "<td>" + month + "</td>";
+                  html += "</tr>";
+                  html += "</tbody>";
+                  html += "</table>";
+                  html += "</div>";
+                  html += "</div>";
+                  html += "</div>";
+                  html += "</div>";
+                }
+              });
+
+              // Hide loading spinner after data is fetched and displayed
+              // $('.loading').hide();
+              // Check if no matching results were found and display "Nothing Found"
+              if (!foundResults) {
+                html = '<div class="col-md-12 text-center">';
+                html += '<h1 class="text-danger fw-bold">Nothing Found!</h1>';
+                html += "</div>";
+              }
+              // Display the HTML content
+              $("#status-container").html(html);
+            },
+          });
+        }
+
+        // Add an event listener for the input field to trigger the filter when the user types
+        $("#searchInput").on("input", function () {
+          updateStatus();
+        });
+
+        updateStatus(); // Initial update
+        setInterval(updateStatus, 5000); // Update every 5 seconds
+
+        // Handle form submission
+$("#addBranchForm").submit(function (event) {
+  event.preventDefault(); // Prevent the default form submission
+
+  // Create a JSON object with form data
+  var formData = {
+    serial: $("#serial").val(),
+    connection_name: $("#connection_name").val(),
+    ip: $("#ip").val(),
+    vendor: $("#vendor").val(),
+    wan_ip: $("#wan_ip").val(),
+  };
+
+  // Perform an AJAX POST request to the server
+  $.ajax({
+    url: "/add_branch",
+    method: "POST",
+    data: JSON.stringify(formData), // Send JSON data
+    contentType: "application/json",
+    success: function (response) {
+      alert(response.message);
+
+      // Clear the form fields
+      $("#serial").val("");
+      $("#connection_name").val("");
+      $("#ip").val("");
+      $("#vendor").val("");
+      $("#wan_ip").val("");
+    },
+    error: function (xhr) {
+      alert("Error: " + xhr.responseText);
+    },
+  });
+});
+      });
+    </script>
+  </head>
+
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top mb-5">
+      <a class="navbar-brand" href="#">Network Monitor</a>
+      <input
+        type="text"
+        id="searchInput"
+        class="form-control"
+        placeholder="Search by WAN IP or Connection Name"
+      />
+    </nav>
+
+    <!-- Loading spinner
+    <div class="loading">
+      <div class="spinner-border text-dark" role="status">
+        <span class="sr-only">Loading...</span>
+      </div>
+    </div> -->
+
+    <div class="row my-5 container-fluid content">
+      <div class="col-md-4 d-flex justify-content-center align-items-center">
+        <!-- Add New Branch Form -->
+        <div class="add-branch-form mt-4 pb-4 w-75 bg-info text-white">
+          <h4 class="mb-4">Add New Branch</h4>
+          <form id="addBranchForm">
+            <div class="form-group">
+              <label for="serial">Serial:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="serial"
+                name="serial"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="connection_name">Connection Name:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="connection_name"
+                name="connection_name"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="ip">IP:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="ip"
+                name="ip"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="vendor">Vendor:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="vendor"
+                name="vendor"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="wan_ip">WAN IP:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="wan_ip"
+                name="wan_ip"
+                required
+              />
+            </div>
+            <button type="submit" class="btn btn-light my-3">Add Branch</button>
+          </form>
+        </div>
+      </div>
+      <div class="col-md-8 d-flex justify-content-center align-items-center">
+        <!-- Connection status will be displayed here dynamically -->
+        <div id="status-container" class="w-100 mt-4"></div>
+      </div>
+    </div>
+  </body>
+</html>
